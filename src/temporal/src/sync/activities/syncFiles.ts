@@ -1,4 +1,4 @@
-import {activityInfo, heartbeat, log, sleep} from '@temporalio/activity'
+import {activityInfo, log} from '@temporalio/activity'
 import {createClient} from 'redis'
 
 export async function syncFiles(redisClient: ReturnType<typeof createClient>, integrationId: string, syncSessionId: string, batchId: string): Promise<void> {
@@ -21,6 +21,7 @@ export async function syncFiles(redisClient: ReturnType<typeof createClient>, in
         throw new Error(`Batch ${batchId} not found`)
     }
     const processedDriveKey = activityInfo().heartbeatDetails || -1
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
     const driveIds: string[] = JSON.parse(result)
     for (let key = 0; key < driveIds.length; key++) {
@@ -31,10 +32,9 @@ export async function syncFiles(redisClient: ReturnType<typeof createClient>, in
         }
         // Do something here
         log.debug("Processing drive", {activity, integrationId, syncSessionId, batchId, driveId})
-        heartbeat(key)
-        await sleep(250)
+        await delay(250)
     }
-    await sleep(1000)
+    await delay(1000)
 
     log.info("finished", {activity, integrationId, syncSessionId, batchId})
 }

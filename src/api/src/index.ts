@@ -36,42 +36,25 @@ app.post('/api/workflow/start', async (req: Request, res: Response) => {
 })
 
 app.post('/api/workflow/cancel', async (req: Request, res: Response) => {
-    const client = await temporalClient()
-    await client.workflow.getHandle(workflowId).cancel()
-
+    // TODO
     res.send('Workflow canceled')
 })
 
 app.post('/api/workflow/terminate', async (req: Request, res: Response) => {
-    const client = await temporalClient()
-    await client.workflow.getHandle(workflowId).terminate('Terminated through UI')
-
+    // TODO
     res.send('Workflow terminated')
 })
 
 app.post('/api/workflow/signal', async (req: Request, res: Response) => {
-    const client = await temporalClient()
-    await client.workflow.getHandle(workflowId).signal(req.body.signal)
-
+    // TODO
     res.send(`Signal ${req.body.signal} sent to workflow`)
 })
 
 app.get('/api/workflow/status', async (req: Request, res: Response) => {
-    const client = await temporalClient()
     let status: WorkflowExecutionDescription | {} = {}
     let operation = 'unknown'
     let orphansDetected = 0
-    try {
-        const description = await client.workflow.getHandle(workflowId).describe()
-        status = description
-        if (description?.memo && 'operation' in description.memo) {
-            operation = description.memo['operation'] as string
-        }
-        const state: { orphansDetected: number } = await client.workflow.getHandle(workflowId).query('getState')
-        orphansDetected = state.orphansDetected
-    } catch (e) {
-        // ignore
-    }
+    // TODO
     res.json({ status, operation, orphansDetected })
 })
 

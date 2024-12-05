@@ -70,7 +70,7 @@ services:
       - temporalIntro-network
     command:
       - -temporal-host=temporal-server
-      - -temporal-queue=sync-batching
+      - -temporal-queue=sync
       - -redis-host=redis
 
   worker-ts:

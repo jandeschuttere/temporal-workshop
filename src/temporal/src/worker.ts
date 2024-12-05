@@ -33,7 +33,7 @@ async function main() {
         workflowsPath: require.resolve('./sync/workflow'),
         activities: createActivities(redisClient),
         taskQueue: 'sync',
-        // maxConcurrentActivityTaskExecutions: 2,
+        maxConcurrentActivityTaskExecutions: 2,
     })
     await worker.run()
 }
