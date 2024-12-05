@@ -1,0 +1,118 @@
+services:
+  postgresql:
+    container_name: temporalIntro-temporal-postgresql
+    environment:
+      POSTGRES_PASSWORD: temporal
+      POSTGRES_USER: temporal
+    image: postgres:${POSTGRESQL_VERSION}
+    networks:
+      - temporalIntro-network
+    volumes:
+      - /var/lib/postgresql/data
+
+  temporal-server:
+    container_name: temporalIntro-temporal
+    depends_on:
+      - postgresql
+    environment:
+      - DB=postgres12
+      - DB_PORT=5432
+      - POSTGRES_USER=temporal
+      - POSTGRES_PWD=temporal
+      - POSTGRES_SEEDS=postgresql
+      - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
+    image: temporalio/auto-setup:${TEMPORAL_VERSION}
+    healthcheck:
+      test: [ "CMD","tctl", "--address", "temporal:7233", "workflow", "list", "||", "exit 1" ]
+      interval: 1s
+      timeout: 5s
+      retries: 30
+    networks:
+      - temporalIntro-network
+    volumes:
+      - ./docker/dynamicconfig:/etc/temporal/config/dynamicconfig
+
+  temporal-admin-tools:
+    container_name: temporalIntro-temporal-admin-tools
+    depends_on:
+      - temporal-server
+    environment:
+      - TEMPORAL_ADDRESS=temporal-server:7233
+      - TEMPORAL_CLI_ADDRESS=temporal-server:7233
+    image: temporalio/admin-tools:${TEMPORAL_ADMINTOOLS_VERSION}
+    networks:
+      - temporalIntro-network
+    stdin_open: true
+    tty: true
+
+  temporal-ui:
+    container_name: temporalIntro-temporal-ui
+    depends_on:
+      - temporal-server
+    environment:
+      - TEMPORAL_ADDRESS=temporal-server:7233
+      - TEMPORAL_CORS_ORIGINS=http://localhost:8080
+    image: temporalio/ui:${TEMPORAL_UI_VERSION}
+    networks:
+      - temporalIntro-network
+    ports:
+      - 8080:8080
+
+  worker-go:
+    build:
+      context: goactivity
+      dockerfile: Dockerfile
+    container_name: temporalIntro-worker-go
+    depends_on:
+      temporal-server:
+        condition: service_healthy
+    networks:
+      - temporalIntro-network
+    command:
+      - -temporal-host=temporal-server
+      - -temporal-queue=sync-batching
+      - -redis-host=redis
+
+  worker-ts:
+    build:
+      context: src/temporal
+      dockerfile: Dockerfile
+    container_name: temporalIntro-worker-ts
+    environment:
+      - TEMPORAL_ADDRESS=temporal-server:7233
+      - REDIS_HOST=redis
+    volumes:
+      - ./src/temporal:/app
+    depends_on:
+      temporal-server:
+        condition: service_healthy
+    networks:
+      - temporalIntro-network
+
+  redis:
+    container_name: temporalIntro-redis
+    image: redis:7.4-alpine
+    networks:
+      - temporalIntro-network
+
+  api:
+    build:
+      context: src/api
+      dockerfile: Dockerfile
+    container_name: temporalIntro-api
+    networks:
+      - temporalIntro-network
+    environment:
+      - TEMPORAL_ADDRESS=temporal-server:7233
+    volumes:
+      - ./src/api:/app
+    ports:
+      - 3001:3000
+
+networks:
+  temporalIntro-network:
+    name: temporalIntro-network
+    ipam:
+      driver: default
+      config:
+        - subnet: 10.45.0.0/16
